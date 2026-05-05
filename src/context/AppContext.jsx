@@ -7,7 +7,7 @@ export const IB_SUBJECTS = [
   { name: 'English A: Language & Literature', group: 1, groupName: 'Language & Literature', canHL: true },
   { name: 'Spanish A: Literature', group: 1, groupName: 'Language & Literature', canHL: true },
   { name: 'French A: Literature', group: 1, groupName: 'Language & Literature', canHL: true },
-  { name: 'Portuguese A: Literature', group: 1, groupName: 'Language & Literature', canHL: true },
+  { name: 'Portuguese A: Language & Literature', group: 1, groupName: 'Language & Literature', canHL: true },
   { name: 'German A: Literature', group: 1, groupName: 'Language & Literature', canHL: true },
   // Group 2 – Language Acquisition
   { name: 'Spanish B', group: 2, groupName: 'Language Acquisition', canHL: true },
@@ -156,10 +156,20 @@ const initialState = {
   },
 };
 
+function migrateState(state) {
+  // Rename "Portuguese A: Literature" → "Portuguese A: Language & Literature"
+  const subjects = (state.subjects || []).map(s =>
+    s.name === 'Portuguese A: Literature'
+      ? { ...s, name: 'Portuguese A: Language & Literature' }
+      : s
+  );
+  return { ...state, subjects };
+}
+
 function loadState() {
   try {
     const s = localStorage.getItem(STORAGE_KEY);
-    if (s) return { ...initialState, ...JSON.parse(s) };
+    if (s) return migrateState({ ...initialState, ...JSON.parse(s) });
   } catch (e) { /* ignore */ }
   return null;
 }
