@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, AlertTriangle, ArrowLeft, UserCircle, LogOut, LogIn } from 'lucide-react';
+import { Trash2, AlertTriangle, ArrowLeft, UserCircle, LogOut, LogIn, Pencil, Check, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,7 +9,11 @@ export default function Settings() {
   const { user, profile, logOut } = useAuth();
   const navigate = useNavigate();
   const [confirmReset, setConfirmReset] = useState(false);
-  const [editingGoal, setEditingGoal] = useState(null); // subject id being edited
+  const [editingGoal, setEditingGoal] = useState(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileName, setProfileName] = useState(state.studentName);
+  const [profileSchool, setProfileSchool] = useState(state.schoolName || '');
+  const [profileYear, setProfileYear] = useState(state.ibYear || '');
 
   function handleReset() {
     dispatch({ type: 'RESET_SETUP' });
@@ -26,6 +30,23 @@ export default function Settings() {
     setEditingGoal(null);
   }
 
+  function saveProfile() {
+    if (!profileName.trim()) return;
+    dispatch({ type: 'UPDATE_PROFILE', payload: {
+      studentName: profileName.trim(),
+      schoolName: profileSchool.trim(),
+      ibYear: profileYear.trim(),
+    }});
+    setEditingProfile(false);
+  }
+
+  function cancelProfileEdit() {
+    setProfileName(state.studentName);
+    setProfileSchool(state.schoolName || '');
+    setProfileYear(state.ibYear || '');
+    setEditingProfile(false);
+  }
+
   return (
     <div className="main-content container fade-in">
       <button className="btn btn-ghost btn-sm" style={{ marginBottom: '1.25rem' }} onClick={() => navigate('/')}>
@@ -37,21 +58,93 @@ export default function Settings() {
 
       {/* Student Info */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <h3 style={{ marginBottom: '1rem' }}>Your Profile</h3>
-        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Name</div>
-            <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{state.studentName}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Target Score</div>
-            <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{state.goalScore} / 45</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Subjects</div>
-            <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{state.subjects.length} + TOK</div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h3>Your Profile</h3>
+          {!editingProfile && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setEditingProfile(true)}>
+              <Pencil size={13} /> Edit
+            </button>
+          )}
         </div>
+
+        {editingProfile ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Nickname</label>
+              <input
+                className="input"
+                value={profileName}
+                onChange={e => setProfileName(e.target.value)}
+                placeholder="Your name"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>School Name</label>
+              <input
+                className="input"
+                value={profileSchool}
+                onChange={e => setProfileSchool(e.target.value)}
+                placeholder="e.g. International School of Geneva"
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>IB Year</label>
+              <input
+                className="input"
+                value={profileYear}
+                onChange={e => setProfileYear(e.target.value)}
+                placeholder="e.g. IB1, IB2, Year 1, 2025–2026"
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '0.625rem', marginTop: '0.25rem' }}>
+              <button className="btn btn-primary btn-sm" onClick={saveProfile} disabled={!profileName.trim()}>
+                <Check size={13} /> Save
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={cancelProfileEdit}>
+                <X size={13} /> Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Name</div>
+              <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{state.studentName}</div>
+            </div>
+            {state.schoolName && (
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>School</div>
+                <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{state.schoolName}</div>
+              </div>
+            )}
+            {state.ibYear && (
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>IB Year</div>
+                <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{state.ibYear}</div>
+              </div>
+            )}
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Target Score</div>
+              <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{state.goalScore} / 45</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Subjects</div>
+              <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{state.subjects.length} + TOK</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Subjects */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ marginBottom: '0.5rem' }}>Subjects</h3>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+          Re-select your subjects and adjust per-subject goals. Grade data is preserved for subjects you keep.
+        </p>
+        <Link to="/setup/edit" className="btn btn-ghost btn-sm" style={{ textDecoration: 'none', display: 'inline-flex' }}>
+          <Pencil size={13} /> Edit Subjects
+        </Link>
       </div>
 
       {/* Account */}
@@ -104,7 +197,7 @@ export default function Settings() {
             <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', flexWrap: 'wrap' }}>
               <span className={`badge ${s.level === 'HL' ? 'badge-hl' : 'badge-sl'}`}>{s.level}</span>
               <span style={{ fontWeight: 500, fontSize: '0.9rem', flex: 1, minWidth: '120px' }}>{s.name}</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Gr.{s.group}</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.groupName}</span>
 
               {editingGoal === s.id ? (
                 <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', marginLeft: 'auto' }}>

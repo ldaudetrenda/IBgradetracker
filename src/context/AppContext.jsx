@@ -20,13 +20,13 @@ export const IB_SUBJECTS = [
   { name: 'French ab initio', group: 2, groupName: 'Language Acquisition', canHL: false },
   { name: 'German ab initio', group: 2, groupName: 'Language Acquisition', canHL: false },
   // Group 3 – Individuals & Societies
-  { name: 'History', group: 3, groupName: 'Individuals & Societies', canHL: true },
-  { name: 'Geography', group: 3, groupName: 'Individuals & Societies', canHL: true },
-  { name: 'Economics', group: 3, groupName: 'Individuals & Societies', canHL: true },
-  { name: 'Psychology', group: 3, groupName: 'Individuals & Societies', canHL: true },
-  { name: 'Business Management', group: 3, groupName: 'Individuals & Societies', canHL: true },
+  { name: 'Business Management', group: 'bss', groupName: 'Business & Social Sciences', canHL: true },
+  { name: 'Economics', group: 'bss', groupName: 'Business & Social Sciences', canHL: true },
+  { name: 'Global Politics', group: 'bss', groupName: 'Business & Social Sciences', canHL: true },
+  { name: 'Psychology', group: 'bss', groupName: 'Business & Social Sciences', canHL: true },
+  { name: 'History', group: 'bss', groupName: 'Business & Social Sciences', canHL: true },
+  { name: 'Geography', group: 'bss', groupName: 'Business & Social Sciences', canHL: true },
   { name: 'Philosophy', group: 3, groupName: 'Individuals & Societies', canHL: true },
-  { name: 'Global Politics', group: 3, groupName: 'Individuals & Societies', canHL: true },
   { name: 'Social & Cultural Anthropology', group: 3, groupName: 'Individuals & Societies', canHL: false },
   { name: 'Environmental Systems & Societies', group: 3, groupName: 'Individuals & Societies', canHL: false },
   // Group 4 – Sciences
@@ -50,6 +50,7 @@ export const IB_SUBJECTS = [
 export const SUBJECT_GROUPS = [
   { id: 1, name: 'Language & Literature' },
   { id: 2, name: 'Language Acquisition' },
+  { id: 'bss', name: 'Business & Social Sciences (BSS)' },
   { id: 3, name: 'Individuals & Societies' },
   { id: 4, name: 'Sciences' },
   { id: 5, name: 'Mathematics' },
@@ -138,6 +139,8 @@ const STORAGE_KEY = 'ib_grade_tracker_v1';
 const initialState = {
   isSetupComplete: false,
   studentName: '',
+  schoolName: '',
+  ibYear: '',
   goalScore: 40,
   corePoints: 0,
   subjects: [],
@@ -174,6 +177,22 @@ function reducer(state, action) {
 
     case 'RESET_SETUP':
       return { ...initialState };
+
+    case 'UPDATE_PROFILE':
+      return {
+        ...state,
+        studentName: action.payload.studentName,
+        schoolName: action.payload.schoolName,
+        ibYear: action.payload.ibYear,
+      };
+
+    case 'UPDATE_SUBJECTS': {
+      const newSubjects = action.payload.subjects.map(s => {
+        const old = state.subjects.find(o => o.name === s.name && o.level === s.level);
+        return old ? { ...s, id: old.id, quarters: old.quarters } : s;
+      });
+      return { ...state, subjects: newSubjects };
+    }
 
     case 'ADD_GRADE': {
       const { subjectId, quarter, grade } = action.payload;

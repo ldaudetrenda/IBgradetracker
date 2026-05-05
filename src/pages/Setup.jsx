@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BookOpen, ChevronRight, ChevronLeft, Check, Lock, User, Target } from 'lucide-react';
 import { useApp, IB_SUBJECTS, SUBJECT_GROUPS } from '../context/AppContext';
 import { logEvent } from '../analytics';
@@ -23,13 +24,27 @@ function StepIndicator({ current }) {
   );
 }
 
-export default function Setup() {
-  const { dispatch } = useApp();
-  const [step, setStep] = useState(0);
+// ─── Main Setup Flow ──────────────────────────────────────────────────────────
+export default function Setup({ editMode = false }) {
+  const { state, dispatch } = useApp();
+  const navigate = useNavigate();
+  const [step, setStep] = useState(editMode ? 1 : 0);
   const [studentName, setStudentName] = useState('');
-  const [goalScore, setGoalScore] = useState(40);
-  const [selected, setSelected] = useState([]);
-  const [subjectGoals, setSubjectGoals] = useState({});
+  const [goalScore, setGoalScore] = useState(editMode ? state.goalScore : 40);
+  const [selected, setSelected] = useState(() => {
+    if (!editMode) return [];
+    return state.subjects.map(s => ({
+      name: s.name,
+      level: s.level,
+      group: s.group,
+      groupName: s.groupName,
+      canHL: IB_SUBJECTS.find(sub => sub.name === s.name)?.canHL ?? true,
+    }));
+  });
+  const [subjectGoals, setSubjectGoals] = useState(() => {
+    if (!editMode) return {};
+    return Object.fromEntries(state.subjects.map(s => [s.name, s.goalGrade]));
+  });
 
   const hlSelected = selected.filter(s => s.level === 'HL');
   const slSelected = selected.filter(s => s.level === 'SL');
@@ -85,7 +100,6 @@ export default function Setup() {
   }
 
   function handleFinish() {
-    logEvent('setup_completed');
     const subjects = selected.map((s, i) => ({
       id: `subject_${i}_${Date.now()}`,
       name: s.name,
@@ -95,10 +109,16 @@ export default function Setup() {
       goalGrade: subjectGoals[s.name] || (s.level === 'HL' ? 6 : 5),
       quarters: { 1: [], 2: [], 3: [], 4: [] },
     }));
-    dispatch({
-      type: 'COMPLETE_SETUP',
-      payload: { studentName: studentName.trim(), goalScore, subjects },
-    });
+    if (editMode) {
+      dispatch({ type: 'UPDATE_SUBJECTS', payload: { subjects } });
+      navigate('/settings');
+    } else {
+      logEvent('setup_completed');
+      dispatch({
+        type: 'COMPLETE_SETUP',
+        payload: { studentName: studentName.trim(), goalScore, subjects },
+      });
+    }
   }
 
   function hlCount() { return hlSelected.length; }
@@ -112,9 +132,11 @@ export default function Setup() {
           <div className="setup-logo">
             <BookOpen size={28} />
           </div>
-          <h1 style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>IB Grade Tracker</h1>
+          <h1 style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>
+            {editMode ? 'Edit Subjects' : 'IB Grade Tracker'}
+          </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Track your IB Diploma progress
+            {editMode ? 'Your grade data will be preserved for unchanged subjects.' : 'Track your IB Diploma progress'}
           </p>
         </div>
 
@@ -193,7 +215,7 @@ export default function Setup() {
             <div style={{ maxHeight: '340px', overflowY: 'auto', marginTop: '1rem', paddingRight: '0.25rem' }}>
               {groupedSubjects.map(group => (
                 <div key={group.id}>
-                  <p className="subject-group-title">Group {group.id}: {group.name}</p>
+                  <p className="subject-group-title">{typeof group.id === 'number' ? `Group ${group.id}: ` : ''}{group.name}</p>
                   <div className="subject-chips">
                     {group.subjects.map(subject => {
                       const sel = isSubjectSelected(subject.name);
@@ -403,7 +425,7 @@ export default function Setup() {
             </button>
           ) : <div />}
 
-          {step < STEPS.length - 1 ? (
+          {step < (editMode ? 2 : STEPS.length - 1) ? (
             <button
               className="btn btn-primary btn-lg"
               disabled={!canNext()}
@@ -412,9 +434,16 @@ export default function Setup() {
               Next <ChevronRight size={16} />
             </button>
           ) : (
-            <button className="btn btn-primary btn-lg" onClick={handleFinish}>
-              Start Tracking <Check size={16} />
-            </button>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              {editMode && (
+                <button className="btn btn-ghost" onClick={() => navigate('/settings')}>
+                  Cancel
+                </button>
+              )}
+              <button className="btn btn-primary btn-lg" onClick={handleFinish}>
+                {editMode ? 'Save Changes' : 'Start Tracking'} <Check size={16} />
+              </button>
+            </div>
           )}
         </div>
       </div>

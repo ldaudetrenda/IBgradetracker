@@ -161,6 +161,7 @@ function AppInner() {
         <Route path="/subject/:id" element={<SubjectDetail />} />
         <Route path="/tok" element={<SubjectDetail />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/setup/edit" element={<Setup editMode />} />
         <Route path="/rooms" element={<Rooms />} />
         <Route path="/dream-university" element={<DreamUniversity />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
