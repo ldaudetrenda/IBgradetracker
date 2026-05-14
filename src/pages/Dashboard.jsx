@@ -7,7 +7,7 @@ import {
   LineChart, Line, Cell,
   AreaChart, Area, ReferenceLine,
 } from 'recharts';
-import { TrendingUp, Award, Target, BookOpen, ChevronRight, ChevronLeft, Settings, Plus, X, FileText, AlertTriangle, Check, Image } from 'lucide-react';
+import { TrendingUp, Award, Target, BookOpen, ChevronRight, ChevronLeft, Settings, Plus, X, FileText, File, AlertTriangle, Check, Image } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
@@ -490,6 +490,7 @@ function ProgressHistorySection({ history, subjects, dispatch }) {
   const [importExtractionFailed, setImportExtractionFailed] = useState(false);
   const [importPasteText, setImportPasteText] = useState('');
   const [showPasteInput, setShowPasteInput] = useState(false);
+  const [importSource, setImportSource] = useState(null); // 'pdf' | 'paste'
   const importFileRef = useRef(null);
 
   // ── Screenshot Import state ──
@@ -509,6 +510,7 @@ function ProgressHistorySection({ history, subjects, dispatch }) {
       return;
     }
     setImportError(null);
+    setImportSource('pdf');
     setImportPhase('processing');
     try {
       const text = await extractPdfText(file);
@@ -554,6 +556,7 @@ function ProgressHistorySection({ history, subjects, dispatch }) {
     setImportRawText(importPasteText);
     setImportIsImageBased(false);
     setImportExtractionFailed(false);
+    setImportSource('paste');
     setImportPhase('review');
   }
 
@@ -619,6 +622,8 @@ function ProgressHistorySection({ history, subjects, dispatch }) {
     setImportExtractionFailed(false);
     setImportPasteText('');
     setShowPasteInput(false);
+    setImportSource(null);
+    setImportDragOver(false);
   }
 
   function saveImport() {
@@ -699,11 +704,63 @@ function ProgressHistorySection({ history, subjects, dispatch }) {
             <button className="btn btn-ghost btn-sm" onClick={() => setScreenshotPhase('upload')}>
               <Image size={13} /> Import Screenshot
             </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setImportError(null); setImportPhase('upload'); }}>
+              <File size={13} /> Import PDF
+            </button>
           </div>
         )}
       </div>
 
-      {/* ── PDF Import Panel ── */}
+      {/* ── PDF Upload Panel ── */}
+      {importPhase === 'upload' && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <h3 style={{ margin: 0 }}>Import PDF</h3>
+            <button className="btn btn-ghost btn-sm" onClick={cancelImport}><X size={14} /></button>
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.875rem' }}>
+            Upload your IB report card PDF to detect grades automatically. The file is processed locally and never uploaded or stored.
+          </p>
+
+          {importError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <AlertTriangle size={14} color="var(--danger)" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+              <p style={{ fontSize: '0.82rem', color: 'var(--danger)', margin: 0 }}>{importError}</p>
+            </div>
+          )}
+
+          <input ref={importFileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
+            onChange={e => { if (e.target.files[0]) handleImportFile(e.target.files[0]); e.target.value = ''; }} />
+
+          <div
+            onDragOver={e => { e.preventDefault(); setImportDragOver(true); }}
+            onDragLeave={() => setImportDragOver(false)}
+            onDrop={e => { e.preventDefault(); setImportDragOver(false); if (e.dataTransfer.files[0]) handleImportFile(e.dataTransfer.files[0]); }}
+            onClick={() => importFileRef.current?.click()}
+            style={{
+              border: `2px dashed ${importDragOver ? 'var(--primary)' : 'var(--border)'}`,
+              borderRadius: 'var(--radius-sm)', padding: '2rem', textAlign: 'center',
+              cursor: 'pointer', background: importDragOver ? 'var(--primary-light)' : 'var(--bg)',
+              transition: 'all 0.15s', marginBottom: '0.875rem',
+            }}
+          >
+            <File size={32} color={importDragOver ? 'var(--primary)' : 'var(--text-light)'} style={{ marginBottom: '0.75rem' }} />
+            <p style={{ fontWeight: 600, marginBottom: '0.25rem', color: importDragOver ? 'var(--primary)' : 'var(--text)' }}>
+              Drop PDF here, or click to browse
+            </p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>PDF files only</p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+            <AlertTriangle size={13} color="#D97706" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+            <p style={{ fontSize: '0.78rem', color: '#92400E', margin: 0 }}>
+              If the PDF cannot be read automatically, you'll be shown a message and can switch to Paste Text, Import Screenshot, or Add Manually.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Paste Text Panel ── */}
       {importPhase === 'paste' && (
         <div className="card" style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -756,7 +813,7 @@ function ProgressHistorySection({ history, subjects, dispatch }) {
             <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
               <AlertTriangle size={14} color="var(--danger)" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
               <p style={{ fontSize: '0.82rem', color: 'var(--danger)', margin: 0 }}>
-                <strong>Could not read this PDF automatically.</strong> It may be password-protected, image-based, or in an unsupported format. Use the paste box below to enter grades manually, or upload a different file.
+                <strong>We could not read this PDF clearly.</strong> Try using Paste Text, Import Screenshot, or Add Manually.
               </p>
             </div>
           )}
@@ -881,7 +938,17 @@ function ProgressHistorySection({ history, subjects, dispatch }) {
             <button className="btn btn-primary btn-sm" onClick={saveImport} disabled={!importLabel.trim()}>
               <Check size={13} /> Confirm Import
             </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => { setImportPasteText(''); setImportPhase('paste'); }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => {
+              setImportExtractionFailed(false);
+              setImportIsImageBased(false);
+              setImportRawText('');
+              setImportLabel('');
+              setImportDetected(0);
+              setImportGrades(Array(subjects.length).fill(''));
+              setShowTextPreview(false);
+              if (importSource === 'paste') { setImportPasteText(''); setImportPhase('paste'); }
+              else { setImportError(null); setImportPhase('upload'); }
+            }}>
               Try Again
             </button>
             <button className="btn btn-ghost btn-sm" onClick={cancelImport}>
